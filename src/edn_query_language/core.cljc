@@ -327,19 +327,18 @@
                       (expr->ast k opts))
         type        (if (= :call (:type ast)) :call :join)
         component   (-> v meta :component)]
-    (merge ast
-           (mark-meta join {:type type :query v})
-           (when-not (nil? component)
-             {:component component})
-           (when query-root?
-             {:query-root true})
-           (when-not (or (number? v) (= '... v) shallow-conversion?)
-             (cond
-               (vector? v) {:children (into [] (map #(expr->ast % opts)) v)}
-               (map? v)    {:children [(union->ast v opts)]}
-               :else       (throw
-                            (ex-info (str "Invalid join, " join)
-                                     {:type :error/invalid-join})))))))
+    (cond-> (merge
+             ast
+             (mark-meta join {:type type :query v})
+             (when-not (or (number? v) (= '... v) shallow-conversion?)
+               (cond
+                 (vector? v) {:children (into [] (map #(expr->ast % opts)) v)}
+                 (map? v)    {:children [(union->ast v opts)]}
+                 :else       (throw
+                              (ex-info (str "Invalid join, " join)
+                                       {:type :error/invalid-join})))))
+      (some? component) (assoc :component component)
+      query-root?       (assoc :query-root true))))
 
 (extend-protocol ASTable
   Symbol
