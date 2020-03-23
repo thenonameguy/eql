@@ -3,7 +3,7 @@
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
             [edn-query-language.gen-helpers :as gen-helpers])
-  (:import [clojure.lang Cons IPersistentList IPersistentMap IPersistentVector Keyword Symbol]))
+  (:import [clojure.lang Cons IPersistentList IPersistentMap IPersistentVector Keyword PersistentHashSet Symbol]))
 
 #?(:clj  (def INCLUDE_SPECS true)
    :cljs (goog-define INCLUDE_SPECS true))
@@ -358,6 +358,8 @@
     {:type         :prop
      :dispatch-key k
      :key          ref})
+  PersistentHashSet
+  (expr->ast [x opts] (call->ast x opts))
   IPersistentList
   (expr->ast [x opts] (call->ast x opts))
   Cons
