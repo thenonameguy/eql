@@ -1,8 +1,6 @@
 (ns edn-query-language.gen-helpers
   (:refer-clojure :exclude [let])
-  (:require
-    [clojure.spec.gen.alpha :as gen])
-  #?(:cljs (:require-macros [compute.data-model.gen :refer [lazy-combinator let]])))
+  (:require [clojure.spec.gen.alpha :as gen]))
 
 (alias 'c 'clojure.core)
 

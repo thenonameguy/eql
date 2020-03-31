@@ -3,7 +3,8 @@
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
             [edn-query-language.gen-helpers :as gen-helpers])
-  (:import [clojure.lang Cons IPersistentList IPersistentMap IPersistentVector Keyword PersistentHashSet Symbol]))
+  #?(:clj
+     (:import [clojure.lang Cons IPersistentList IPersistentMap IPersistentVector Keyword PersistentHashSet Symbol])))
 
 #?(:clj  (def INCLUDE_SPECS true)
    :cljs (goog-define INCLUDE_SPECS true))
@@ -266,8 +267,9 @@
 
 ;; library
 
-(defprotocol ASTable
-  (expr->ast [x opts]))
+#?(:clj (defprotocol ASTable
+          (expr->ast [x opts]))
+   :cljs (declare expr->ast))
 
 (defn- mark-meta [source target]
   (cond-> target
@@ -340,29 +342,50 @@
       (some? component) (assoc :component component)
       query-root?       (assoc :query-root true))))
 
-(extend-protocol ASTable
-  Symbol
-  (expr->ast [k _]
-    {:dispatch-key k
-     :key          k})
-  Keyword
-  (expr->ast [k _]
-    {:type         :prop
-     :dispatch-key k
-     :key          k})
-  IPersistentMap
-  (expr->ast [x opts] (join->ast x opts))
-  IPersistentVector
-  (expr->ast [[k :as ref] _]
-    {:type         :prop
-     :dispatch-key k
-     :key          ref})
-  PersistentHashSet
-  (expr->ast [x opts] (call->ast x opts))
-  IPersistentList
-  (expr->ast [x opts] (call->ast x opts))
-  Cons
-  (expr->ast [x opts] (call->ast x opts)))
+(defn symbol->ast [x]
+  {:dispatch-key x
+   :key          x})
+
+(defn keyword->ast [x]
+  {:type         :prop
+   :dispatch-key x
+   :key          x})
+
+(defn ident->ast [[k :as ref]]
+  {:type         :prop
+   :dispatch-key k
+   :key          ref})
+
+#?(:clj
+   (extend-protocol ASTable
+     Symbol
+     (expr->ast [x _] (symbol->ast x))
+     Keyword
+     (expr->ast [x _] (keyword->ast x))
+     IPersistentMap
+     (expr->ast [x opts] (join->ast x opts))
+     IPersistentVector
+     (expr->ast [x _] (ident->ast x))
+     PersistentHashSet
+     (expr->ast [x opts] (call->ast x opts))
+     IPersistentList
+     (expr->ast [x opts] (call->ast x opts))
+     Cons
+     (expr->ast [x opts] (call->ast x opts)))
+   :cljs
+   (defn expr->ast
+     "Given a query expression convert it into an AST."
+     [x opts]
+     (cond
+       (symbol? x)  (symbol->ast x)
+       (keyword? x) (keyword->ast x)
+       (map? x)     (join->ast x opts)
+       (vector? x)  (ident->ast x)
+       (seq? x)     (call->ast x opts)
+       :else        (throw
+                     (ex-info (str "Invalid expression " x)
+                              {:type :error/invalid-expression})))))
+
 
 (defn wrap-expr [root? expr]
   (if root?
