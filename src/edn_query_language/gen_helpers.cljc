@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [let])
   (:require [clojure.spec.gen.alpha :as gen]))
 
-(alias 'c 'clojure.core)
+#?(:clj (alias 'c 'clojure.core))
 
 #?(:clj
    (def dynaload #'gen/dynaload))
